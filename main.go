@@ -22,10 +22,11 @@ func main() {
 
 func run() int {
 	var (
-		defaultName    string
-		themeSlug      string
-		height         int
-		listFlag       bool
+		defaultName   string
+		themeSlug     string
+		themeShowroom bool
+		height        int
+		listFlag      bool
 		nonInteractive bool
 		noColor        bool
 	)
@@ -114,6 +115,7 @@ EXIT CODES
 
 	root.Flags().StringVarP(&defaultName, "default", "d", "", "pre-highlight / CI fallback item name")
 	root.Flags().StringVar(&themeSlug, "theme", "", "color theme slug (default: gum)")
+	root.Flags().BoolVar(&themeShowroom, "theme-showroom", false, "browse all built-in themes interactively")
 	root.Flags().IntVar(&height, "height", 0, "max visible list rows")
 	root.Flags().BoolVarP(&listFlag, "list", "l", false, "print all names and exit")
 	root.Flags().BoolVarP(&nonInteractive, "non-interactive", "n", false, "never draw TUI")
@@ -139,6 +141,13 @@ EXIT CODES
 
 	exitCode := 0
 	root.RunE = func(cmd *cobra.Command, args []string) error {
+		if themeShowroom {
+			if err := tui.RunShowroom(); err != nil {
+				fmt.Fprintln(os.Stderr, "error:", err)
+				exitCode = 1
+			}
+			return nil
+		}
 		if len(args) == 0 {
 			fmt.Fprintln(cmd.OutOrStdout(), strings.SplitN(cmd.Long, "\n", 2)[0])
 			fmt.Fprintln(cmd.OutOrStdout())

@@ -109,6 +109,9 @@ func Lookup(slug string) Palette {
 	return catalog[0] // gum
 }
 
+// All returns every Palette in catalog order.
+func All() []Palette { return catalog }
+
 // Slugs returns all available slugs in catalog order.
 func Slugs() []string {
 	out := make([]string, len(catalog))
