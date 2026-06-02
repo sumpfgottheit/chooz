@@ -91,6 +91,20 @@ EXIT CODES
 	root.Flags().BoolVarP(&nonInteractive, "non-interactive", "n", false, "never draw TUI")
 	root.Flags().BoolVar(&noColor, "no-color", false, "disable all styling")
 
+	root.ValidArgsFunction = func(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
+		switch len(args) {
+		case 0:
+			return []string{"yaml", "yml"}, cobra.ShellCompDirectiveFilterFileExt
+		case 1:
+			menu, err := config.Load(args[0])
+			if err != nil {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			return selector.List(menu.Items), cobra.ShellCompDirectiveNoFileComp
+		}
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+
 	exitCode := 0
 	root.RunE = func(cmd *cobra.Command, args []string) error {
 		exitCode = dispatch(args, defaultName, height, listFlag, nonInteractive, noColor)
