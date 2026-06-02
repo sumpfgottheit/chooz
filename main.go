@@ -108,7 +108,9 @@ EXIT CODES
 	exitCode := 0
 	root.RunE = func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return cmd.Help()
+			fmt.Fprint(cmd.OutOrStdout(), cmd.UsageString())
+			fmt.Fprintln(cmd.OutOrStdout(), "Run 'chooz --help' for full documentation including YAML structure.")
+			return nil
 		}
 		exitCode = dispatch(args, defaultName, height, listFlag, nonInteractive, noColor)
 		return nil
