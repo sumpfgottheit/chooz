@@ -38,7 +38,8 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	if !ok {
 		return
 	}
-	label := mi.item.DisplayLabel()
+	const prefixWidth = 2 // "> " or "  "
+	label := truncate(mi.item.DisplayLabel(), m.Width()-prefixWidth)
 	if d.thm.NoColor {
 		if index == m.Index() {
 			fmt.Fprint(w, "> "+label)
@@ -56,17 +57,18 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 
 // Model is the Bubble Tea model for the interactive menu.
 type Model struct {
-	list      list.Model
-	viewport  viewport.Model
-	items     []config.Item
-	menu      *config.Menu
-	thm       *theme.Theme
-	maxHeight int
-	width     int
-	height    int
-	selected  string
-	cancelled bool
-	ready     bool
+	list        list.Model
+	viewport    viewport.Model
+	items       []config.Item
+	menu        *config.Menu
+	thm         *theme.Theme
+	maxHeight   int
+	width       int
+	height      int
+	selected    string
+	cancelled   bool
+	ready       bool
+	hasAnyDesc  bool // true if at least one item has a description
 }
 
 func newModel(menu *config.Menu, thm *theme.Theme, defaultName string, maxHeight int) Model {
@@ -92,13 +94,22 @@ func newModel(menu *config.Menu, thm *theme.Theme, defaultName string, maxHeight
 		}
 	}
 
+	hasAnyDesc := false
+	for _, item := range menu.Items {
+		if item.Description != "" {
+			hasAnyDesc = true
+			break
+		}
+	}
+
 	return Model{
-		list:      l,
-		viewport:  viewport.New(0, 0),
-		items:     menu.Items,
-		menu:      menu,
-		thm:       thm,
-		maxHeight: maxHeight,
+		list:       l,
+		viewport:   viewport.New(0, 0),
+		items:      menu.Items,
+		menu:       menu,
+		thm:        thm,
+		maxHeight:  maxHeight,
+		hasAnyDesc: hasAnyDesc,
 	}
 }
 
@@ -168,28 +179,34 @@ func (m Model) View() string {
 	}
 
 	listView := m.list.View()
-	previewView := m.viewport.View()
 
-	if m.width >= wideThreshold {
-		sep := " │ "
-		if !m.thm.NoColor {
-			sep = m.thm.Border.Render(sep)
-		}
-		content := lipgloss.JoinHorizontal(lipgloss.Top, listView, sep, previewView)
-		sb.WriteString(content)
-	} else {
+	if !m.hasAnyDesc {
 		sb.WriteString(listView)
-		sb.WriteString("\n")
-		divider := strings.Repeat("─", m.width)
-		if !m.thm.NoColor {
-			divider = m.thm.Border.Render(divider)
+	} else {
+		previewView := m.viewport.View()
+		if m.width >= wideThreshold {
+			sep := " │ "
+			if !m.thm.NoColor {
+				sep = m.thm.Border.Render(sep)
+			}
+			sb.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, listView, sep, previewView))
+		} else {
+			sb.WriteString(listView)
+			sb.WriteString("\n")
+			divider := strings.Repeat("─", m.width)
+			if !m.thm.NoColor {
+				divider = m.thm.Border.Render(divider)
+			}
+			sb.WriteString(divider + "\n")
+			sb.WriteString(previewView)
 		}
-		sb.WriteString(divider + "\n")
-		sb.WriteString(previewView)
 	}
 
 	sb.WriteString("\n")
-	hint := "↑/↓/j/k: navigate • enter: select • q/esc: cancel • pgup/pgdn: scroll preview"
+	hint := "↑/↓/j/k: navigate • enter: select • q/esc: cancel"
+	if m.hasAnyDesc {
+		hint += " • pgup/pgdn: scroll preview"
+	}
 	if m.thm.NoColor {
 		sb.WriteString(hint)
 	} else {
@@ -222,6 +239,11 @@ func (m Model) withLayout() Model {
 		listH = m.maxHeight
 	}
 
+	if !m.hasAnyDesc {
+		m.list.SetSize(m.width, listH)
+		return m
+	}
+
 	if m.width >= wideThreshold {
 		listW := m.width * 2 / 5
 		if listW < 15 {
@@ -252,6 +274,8 @@ func (m Model) withLayout() Model {
 }
 
 // withPreview updates the viewport content for the currently selected item.
+// The preview always shows the full title; if a description exists it follows
+// after a separator line.
 func (m Model) withPreview() Model {
 	if m.viewport.Width <= 0 {
 		return m
@@ -260,15 +284,29 @@ func (m Model) withPreview() Model {
 	if !ok {
 		return m
 	}
-	desc := item.item.Description
+
+	title := item.item.DisplayLabel()
+	desc := strings.TrimRight(item.item.Description, "\n")
+
+	var content string
 	if desc == "" {
-		desc = "(no description)"
-	}
-	wrapped := wrapText(desc, m.viewport.Width)
-	if m.thm.NoColor {
-		m.viewport.SetContent(wrapped)
+		content = wrapText(title, m.viewport.Width)
 	} else {
-		m.viewport.SetContent(m.thm.Description.Render(wrapped))
+		sep := strings.Repeat("─", m.viewport.Width)
+		content = wrapText(title, m.viewport.Width) + "\n" + sep + "\n" + wrapText(desc, m.viewport.Width)
+	}
+
+	if m.thm.NoColor {
+		m.viewport.SetContent(content)
+	} else {
+		titlePart := m.thm.Selected.Render(wrapText(title, m.viewport.Width))
+		if desc == "" {
+			m.viewport.SetContent(titlePart)
+		} else {
+			sep := m.thm.Border.Render(strings.Repeat("─", m.viewport.Width))
+			descPart := m.thm.Description.Render(wrapText(desc, m.viewport.Width))
+			m.viewport.SetContent(titlePart + "\n" + sep + "\n" + descPart)
+		}
 	}
 	m.viewport.GotoTop()
 	return m
@@ -333,6 +371,18 @@ func wrapLine(line string, width int) string {
 	return strings.Join(result, "\n")
 }
 
+// truncate shortens s to max runes, appending "…" if trimmed.
+func truncate(s string, max int) string {
+	runes := []rune(s)
+	if max <= 0 || len(runes) <= max {
+		return s
+	}
+	if max == 1 {
+		return "…"
+	}
+	return string(runes[:max-1]) + "…"
+}
+
 // Run starts the interactive TUI and returns the selected item name.
 // Returns "" if the user cancelled (exit 130 should be used by the caller).
 func Run(menu *config.Menu, thm *theme.Theme, defaultName string, maxHeight int) (string, error) {
@@ -341,7 +391,7 @@ func Run(menu *config.Menu, thm *theme.Theme, defaultName string, maxHeight int)
 	opts := []tea.ProgramOption{tea.WithAltScreen()}
 
 	if f, err := os.OpenFile("/dev/tty", os.O_RDWR, 0); err == nil {
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		opts = append(opts, tea.WithOutput(f), tea.WithInput(f))
 	} else {
 		opts = append(opts, tea.WithOutput(os.Stderr))
