@@ -23,6 +23,7 @@ func main() {
 func run() int {
 	var (
 		defaultName    string
+		themeSlug      string
 		height         int
 		listFlag       bool
 		nonInteractive bool
@@ -50,29 +51,40 @@ YAML STRUCTURE
       description: |                    # optional, multi-line supported
         Live cluster. Handle with care.
 
-  theme:                                 # optional colour overrides
-    cursor:      "212"                   # ANSI-256 index or hex (#ff87d7)
-    selected:    "212"
-    item:        "252"
-    header:      "252"
-    description: "246"
-    border:      "238"
-    help:        "240"
+  theme:
+    name: nord                           # optional; same as --theme nord
 
 All unknown keys are silently ignored, so newer YAML files work with older
 binaries without error.
 
+THEMES
+
+  Available themes (--theme <slug> or CHOOZ_THEME=<slug>):
+
+    gum              Gum (charm.sh) — default
+    gruvbox-dark     Gruvbox Dark
+    nord             Nord
+    dracula          Dracula
+    catppuccin-mocha Catppuccin Mocha
+    tokyo-night      Tokyo Night
+    gruvbox-light    Gruvbox Light
+    solarized-light  Solarized Light
+    catppuccin-latte Catppuccin Latte
+    one-light        One Light
+    rose-pine-dawn   Rosé Pine Dawn
+    solarized        Solarized (adaptive light/dark)
+    everforest       Everforest (adaptive light/dark)
+    rose-pine        Rosé Pine (adaptive light/dark)
+    kanagawa         Kanagawa (adaptive light/dark)
+    base16           base16 Default (adaptive light/dark)
+
+  The terminal background is never overridden by any theme.
+
 ENVIRONMENT
 
-  NO_COLOR               disable all ANSI styling
-  CLICOLOR_FORCE         keep colours even when output is not a TTY
-  CHOOZ_THEME_CURSOR     override cursor colour (same format as theme.cursor)
-  CHOOZ_THEME_SELECTED   override selected-item colour
-  CHOOZ_THEME_ITEM       override normal-item colour
-  CHOOZ_THEME_HEADER     override header colour
-  CHOOZ_THEME_DESCRIPTION override description colour
-  CHOOZ_THEME_BORDER     override border/separator colour
-  CHOOZ_THEME_HELP       override help-hint colour
+  NO_COLOR       disable all ANSI styling
+  CLICOLOR_FORCE keep colours even when output is not a TTY
+  CHOOZ_THEME    theme slug (overridden by --theme flag)
 
 SHELL COMPLETION
 
@@ -101,10 +113,15 @@ EXIT CODES
 	}
 
 	root.Flags().StringVarP(&defaultName, "default", "d", "", "pre-highlight / CI fallback item name")
+	root.Flags().StringVar(&themeSlug, "theme", "", "color theme slug (default: gum)")
 	root.Flags().IntVar(&height, "height", 0, "max visible list rows")
 	root.Flags().BoolVarP(&listFlag, "list", "l", false, "print all names and exit")
 	root.Flags().BoolVarP(&nonInteractive, "non-interactive", "n", false, "never draw TUI")
 	root.Flags().BoolVar(&noColor, "no-color", false, "disable all styling")
+
+	_ = root.RegisterFlagCompletionFunc("theme", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+		return theme.Slugs(), cobra.ShellCompDirectiveNoFileComp
+	})
 
 	root.ValidArgsFunction = func(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
 		switch len(args) {
@@ -129,7 +146,7 @@ EXIT CODES
 			fmt.Fprintln(cmd.OutOrStdout(), "Run 'chooz --help' for full documentation including YAML structure.")
 			return nil
 		}
-		exitCode = dispatch(args, defaultName, height, listFlag, nonInteractive, noColor)
+		exitCode = dispatch(args, defaultName, themeSlug, height, listFlag, nonInteractive, noColor)
 		return nil
 	}
 
@@ -140,7 +157,7 @@ EXIT CODES
 	return exitCode
 }
 
-func dispatch(args []string, defaultName string, height int, listFlag, nonInteractive, noColor bool) int {
+func dispatch(args []string, defaultName, themeSlug string, height int, listFlag, nonInteractive, noColor bool) int {
 	filePath := args[0]
 	var posName string
 	if len(args) > 1 {
@@ -191,8 +208,16 @@ func dispatch(args []string, defaultName string, height int, listFlag, nonIntera
 		return 1
 	}
 
-	// interactive TUI
-	thm := theme.New(menu.Theme, noColor)
+	// Resolve theme: --theme > CHOOZ_THEME env > YAML > gum (default)
+	resolvedTheme := themeSlug
+	if resolvedTheme == "" {
+		resolvedTheme = os.Getenv("CHOOZ_THEME")
+	}
+	if resolvedTheme == "" {
+		resolvedTheme = menu.Theme.Name
+	}
+
+	thm := theme.New(resolvedTheme, noColor)
 	result, err := tui.Run(menu, thm, defaultName, height)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)

@@ -25,13 +25,7 @@ func (i Item) DisplayLabel() string {
 }
 
 type Theme struct {
-	Cursor      string `yaml:"cursor"`
-	Selected    string `yaml:"selected"`
-	Item        string `yaml:"item"`
-	Header      string `yaml:"header"`
-	Description string `yaml:"description"`
-	Border      string `yaml:"border"`
-	Help        string `yaml:"help"`
+	Name string `yaml:"name"` // theme slug, e.g. "nord" (optional; overridden by --theme / CHOOZ_THEME)
 }
 
 type Menu struct {
