@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -108,6 +109,8 @@ EXIT CODES
 	exitCode := 0
 	root.RunE = func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
+			fmt.Fprintln(cmd.OutOrStdout(), strings.SplitN(cmd.Long, "\n", 2)[0])
+			fmt.Fprintln(cmd.OutOrStdout())
 			fmt.Fprint(cmd.OutOrStdout(), cmd.UsageString())
 			fmt.Fprintln(cmd.OutOrStdout(), "Run 'chooz --help' for full documentation including YAML structure.")
 			return nil
