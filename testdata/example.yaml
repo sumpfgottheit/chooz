@@ -1,0 +1,27 @@
+title: "Select a target environment"
+description: "Pick where to deploy your changes."
+
+items:
+  - name: prod
+    title: "Production"
+    description: |
+      Live cluster. Handle with care.
+      All changes go live immediately.
+      Requires two approvals before deploy.
+
+  - name: stage
+    title: "Staging"
+    description: |
+      Pre-production environment.
+      Mirrors production data (anonymized).
+      Used for final QA before releases.
+
+  - name: dev
+    title: "Development"
+    description: |
+      Local dev cluster.
+      Fast iteration, no approvals needed.
+      Data resets nightly.
+
+theme:
+  cursor: "212"

@@ -1,0 +1,4 @@
+items:
+  - name: valid
+  - name: invalid-name
+  - name: also_invalid

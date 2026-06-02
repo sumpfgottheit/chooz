@@ -1,0 +1,6 @@
+items:
+  - name: foo
+    title: "First Foo"
+  - name: bar
+  - name: foo
+    title: "Duplicate Foo"
