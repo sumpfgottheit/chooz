@@ -74,6 +74,20 @@ ENVIRONMENT
   CHOOZ_THEME_BORDER     override border/separator colour
   CHOOZ_THEME_HELP       override help-hint colour
 
+SHELL COMPLETION
+
+  Activate for the current shell session:
+
+    bash   source <(chooz completion bash)
+    zsh    source <(chooz completion zsh)
+    fish   chooz completion fish | source
+
+  To persist across sessions, add the source line to ~/.bashrc or ~/.zshrc.
+
+  Once active, tab-completion works for both arguments:
+    chooz <TAB>            — completes .yaml / .yml files
+    chooz menu.yaml <TAB>  — completes item names from that file
+
 EXIT CODES
 
   0    item selected
