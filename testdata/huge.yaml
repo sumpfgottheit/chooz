@@ -1,0 +1,110 @@
+title: "Infrastructure Runbook"
+description: "Select an operation to execute."
+
+items:
+  - name: deploy
+    title: "Deploy to Production Triggers a full production deployment via the CI pipeline. Requires all checks to be green before proceeding."
+    description: |
+      Triggers a full production deployment via the CI pipeline.
+      Requires all checks to be green before proceeding.
+
+      Steps performed automatically:
+        1. Build and push Docker image
+        2. Run database migrations
+        3. Rolling restart of all pods
+        4. Smoke-test against /health endpoint
+
+      Rollback is automatic if the smoke-test fails within 120 s.
+
+  - name: migrate
+    title: "Run Database Migrations"
+    description: |
+      Applies all pending Alembic/Flyway migrations to the production database.
+
+      Always take a snapshot before running in production.
+      Migrations are run inside a transaction where possible; irreversible
+      migrations (DROP COLUMN, etc.) are flagged in the changelog.
+
+  - name: rollback
+    title: "Rollback Last Release"
+    description: |
+      Reverts the cluster to the previously pinned image tag.
+
+      This does NOT roll back database migrations. If the latest migration
+      is destructive, a separate restore procedure is required.
+      Check the #incidents channel before triggering a rollback.
+
+  - name: scale
+    title: "Scale Deployment"
+    description: |
+      Interactively adjusts the replica count for a given service.
+      Useful during load spikes or scheduled maintenance windows.
+
+      Scaling down to zero is allowed but will cause downtime.
+      Auto-scaling resumes automatically after 30 minutes unless
+      the override flag is explicitly cleared.
+
+  - name: restart
+    title: "Restart All Pods"
+    description: |
+      Performs a rolling restart of every pod in the namespace.
+      No downtime expected for deployments with more than one replica.
+
+  - name: logs
+    title: "Tail Live Logs"
+    description: |
+      Streams aggregated logs from all running pods to your terminal.
+
+      Filters available (set via env vars before running):
+        LOG_LEVEL   — debug | info | warn | error  (default: info)
+        LOG_SERVICE — restrict output to one service name
+
+      Press Ctrl-C to stop streaming.
+
+  - name: backup
+    title: "Trigger Manual Backup"
+    description: |
+      Initiates an out-of-schedule snapshot of the primary database
+      and uploads it to the configured S3 bucket.
+
+      Backups are encrypted at rest with the team KMS key.
+      Retention policy: 30 days for daily snapshots, 1 year for monthlies.
+      Expected duration: 5–15 minutes depending on database size.
+
+  - name: certrenew
+    title: "Renew TLS Certificates"
+    description: |
+      Forces an immediate renewal of all Let's Encrypt certificates
+      managed by cert-manager, bypassing the 30-day renewal window.
+
+      Use this after a domain change or if a certificate is flagged
+      as revoked. cert-manager will restart the affected ingress pods
+      once the new certificate is issued.
+
+  - name: drain
+    title: "Drain a Node"
+    description: |
+      Cordons a Kubernetes node and evicts all non-daemonset pods.
+      Required before applying OS-level patches or replacing hardware.
+
+      You will be prompted for the node name interactively.
+      Ensure enough capacity exists on remaining nodes before draining.
+      Re-enable scheduling afterwards with: kubectl uncordon <node>
+
+  - name: audit
+    title: "Run Security Audit"
+    description: |
+      Executes the full security audit suite against the current cluster.
+      Checks performed:
+        - CIS Kubernetes Benchmark (kube-bench)
+        - Container image CVE scan (Trivy)
+        - Secret exposure scan (truffleHog)
+        - Network policy coverage report
+
+      Results are written to audit-report-<date>.json and posted
+      to the #security-alerts Slack channel automatically.
+
+theme:
+  cursor: "39"
+  header: "39"
+  border: "240"
