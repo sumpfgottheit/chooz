@@ -80,7 +80,7 @@ EXIT CODES
   2    usage error (bad flags or missing argument)
   130  user cancelled (Esc, Ctrl-C, or q)`,
 		Version:       version,
-		Args:          cobra.RangeArgs(1, 2),
+		Args:          cobra.RangeArgs(0, 2),
 		SilenceErrors: true,
 		SilenceUsage:  true,
 	}
@@ -107,6 +107,9 @@ EXIT CODES
 
 	exitCode := 0
 	root.RunE = func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return cmd.Help()
+		}
 		exitCode = dispatch(args, defaultName, height, listFlag, nonInteractive, noColor)
 		return nil
 	}
