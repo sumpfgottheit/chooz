@@ -421,6 +421,9 @@ func wrapLine(line string, width int) string {
 				lineLen = 0
 			}
 			chunk := runewidth.Truncate(word, width, "")
+			if chunk == "" {
+				break // guard: a single character is wider than the viewport
+			}
 			result = append(result, chunk)
 			word = word[len(chunk):]
 		}

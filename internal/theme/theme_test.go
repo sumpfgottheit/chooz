@@ -3,6 +3,8 @@ package theme
 import (
 	"os"
 	"testing"
+
+	"github.com/charmbracelet/lipgloss"
 )
 
 // unsetNoColor removes NO_COLOR from the environment for the duration of the
@@ -22,7 +24,7 @@ func unsetNoColor(t *testing.T) {
 }
 
 func TestNoColorFlag(t *testing.T) {
-	thm := New("gum", true)
+	thm := New("gum", Overrides{}, true)
 	if !thm.NoColor {
 		t.Error("expected NoColor=true when noColor flag is set")
 	}
@@ -30,7 +32,7 @@ func TestNoColorFlag(t *testing.T) {
 
 func TestNoColorEnv(t *testing.T) {
 	t.Setenv("NO_COLOR", "1")
-	thm := New("gum", false)
+	thm := New("gum", Overrides{}, false)
 	if !thm.NoColor {
 		t.Error("expected NoColor=true when NO_COLOR env is set")
 	}
@@ -39,7 +41,7 @@ func TestNoColorEnv(t *testing.T) {
 func TestNoColorEnvEmpty(t *testing.T) {
 	// Per nocolor.org: presence of the variable (even empty) disables colors.
 	t.Setenv("NO_COLOR", "")
-	thm := New("gum", false)
+	thm := New("gum", Overrides{}, false)
 	if !thm.NoColor {
 		t.Error("expected NoColor=true when NO_COLOR is set (even to empty string)")
 	}
@@ -47,11 +49,11 @@ func TestNoColorEnvEmpty(t *testing.T) {
 
 func TestDefaultTheme(t *testing.T) {
 	unsetNoColor(t)
-	thm := New("", false)
+	thm := New("", Overrides{}, false)
 	if thm.NoColor {
 		t.Error("expected NoColor=false for default theme")
 	}
-	// Styles should render without panic
+	// Styles should render without panic.
 	for _, s := range []string{
 		thm.Cursor.Render("x"),
 		thm.Selected.Render("x"),
@@ -62,6 +64,65 @@ func TestDefaultTheme(t *testing.T) {
 		thm.Help.Render("x"),
 	} {
 		_ = s
+	}
+}
+
+func TestYAMLOverrideTakesPrecedenceOverPalette(t *testing.T) {
+	unsetNoColor(t)
+	const override = "#ff0000"
+	thm := New("nord", Overrides{Cursor: override}, false)
+	nordDefault := New("nord", Overrides{}, false)
+	if thm.Cursor.GetForeground() == nordDefault.Cursor.GetForeground() {
+		t.Error("YAML cursor override had no effect on style")
+	}
+	if thm.Cursor.GetForeground() != lipgloss.Color(override) {
+		t.Errorf("cursor color: want %q, got %v", override, thm.Cursor.GetForeground())
+	}
+}
+
+func TestEnvVarOverrideTakesPrecedenceOverYAML(t *testing.T) {
+	unsetNoColor(t)
+	const envColor = "#00ff00"
+	const yamlColor = "#ff0000"
+	t.Setenv("CHOOZ_THEME_SELECTED", envColor)
+	thm := New("gum", Overrides{Selected: yamlColor}, false)
+	// Env var must win.
+	if thm.Selected.GetForeground() != lipgloss.Color(envColor) {
+		t.Errorf("CHOOZ_THEME_SELECTED: want %q, got %v", envColor, thm.Selected.GetForeground())
+	}
+}
+
+func TestEnvVarOverrideAllElements(t *testing.T) {
+	unsetNoColor(t)
+	want := map[string]lipgloss.Color{
+		"CHOOZ_THEME_CURSOR":      "#111111",
+		"CHOOZ_THEME_SELECTED":    "#222222",
+		"CHOOZ_THEME_ITEM":        "#333333",
+		"CHOOZ_THEME_HEADER":      "#444444",
+		"CHOOZ_THEME_DESCRIPTION": "#555555",
+		"CHOOZ_THEME_BORDER":      "#666666",
+		"CHOOZ_THEME_HELP":        "#777777",
+	}
+	for k, v := range want {
+		t.Setenv(k, string(v))
+	}
+	thm := New("gum", Overrides{}, false)
+	cases := []struct {
+		env   string
+		got   lipgloss.TerminalColor
+	}{
+		{"CHOOZ_THEME_CURSOR", thm.Cursor.GetForeground()},
+		{"CHOOZ_THEME_SELECTED", thm.Selected.GetForeground()},
+		{"CHOOZ_THEME_ITEM", thm.Item.GetForeground()},
+		{"CHOOZ_THEME_HEADER", thm.Header.GetForeground()},
+		{"CHOOZ_THEME_DESCRIPTION", thm.Description.GetForeground()},
+		{"CHOOZ_THEME_BORDER", thm.Border.GetForeground()},
+		{"CHOOZ_THEME_HELP", thm.Help.GetForeground()},
+	}
+	for _, c := range cases {
+		if c.got != want[c.env] {
+			t.Errorf("%s: want %v, got %v", c.env, want[c.env], c.got)
+		}
 	}
 }
 
@@ -86,7 +147,7 @@ func TestAllSlugsResolvable(t *testing.T) {
 func TestSlugCaseInsensitiveViaNew(t *testing.T) {
 	unsetNoColor(t)
 	// New() lowercases before Lookup; Lookup itself is case-sensitive.
-	thm := New("NORD", false)
+	thm := New("NORD", Overrides{}, false)
 	if thm.NoColor {
 		t.Error("expected styled theme for uppercase slug NORD")
 	}
@@ -95,7 +156,7 @@ func TestSlugCaseInsensitiveViaNew(t *testing.T) {
 func TestKnownThemes(t *testing.T) {
 	unsetNoColor(t)
 	for _, slug := range []string{"nord", "dracula", "tokyo-night", "catppuccin-mocha", "everforest"} {
-		thm := New(slug, false)
+		thm := New(slug, Overrides{}, false)
 		if thm.NoColor {
 			t.Errorf("theme %q: unexpected NoColor=true", slug)
 		}

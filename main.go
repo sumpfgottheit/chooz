@@ -233,7 +233,15 @@ func dispatch(args []string, defaultName, themeSlug string, height int, listFlag
 	// Resolve theme: --theme > CHOOZ_THEME env > YAML > gum (default)
 	resolvedTheme := cmp.Or(themeSlug, os.Getenv("CHOOZ_THEME"), menu.Theme.Name)
 
-	thm := theme.New(resolvedTheme, noColor)
+	thm := theme.New(resolvedTheme, theme.Overrides{
+		Cursor:      menu.Theme.Cursor,
+		Selected:    menu.Theme.Selected,
+		Item:        menu.Theme.Item,
+		Header:      menu.Theme.Header,
+		Description: menu.Theme.Description,
+		Border:      menu.Theme.Border,
+		Help:        menu.Theme.Help,
+	}, noColor)
 	result, err := tui.Run(menu, thm, defaultName, height)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
