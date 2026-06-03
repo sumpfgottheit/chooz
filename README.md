@@ -222,3 +222,10 @@ make clean    # remove binary
 - **TUI:** [Bubble Tea](https://github.com/charmbracelet/bubbletea) · [Bubbles](https://github.com/charmbracelet/bubbles) · [Lip Gloss](https://github.com/charmbracelet/lipgloss)
 - **YAML:** `gopkg.in/yaml.v3`
 - **CLI:** [Cobra](https://github.com/spf13/cobra)
+
+## Authors
+
+- Idea: @sumpfgottheit
+- Planing: Opus 4.8
+- Implementing: Sonnet 4.6
+- Reviewers: ChatGPT 5.5, Gemini Pro 3.1
