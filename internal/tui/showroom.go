@@ -75,9 +75,10 @@ func (m showroomModel) View() string {
 	mockUI := strings.Join([]string{menuTitle, "", columns, "", choozHelp}, "\n")
 
 	// ── showroom chrome ──────────────────────────────────────────────────
-	nameLabel  := headerStyle.Render(p.Name)
-	counter    := helpStyle.Render(fmt.Sprintf("%d/%d", m.idx+1, len(m.palettes)))
-	titleBar   := lipgloss.JoinHorizontal(lipgloss.Bottom, nameLabel, "   ", counter)
+	nameLabel   := headerStyle.Render(p.Name)
+	variantHint := helpStyle.Render(p.Variant)
+	counter     := helpStyle.Render(fmt.Sprintf("%d/%d", m.idx+1, len(m.palettes)))
+	titleBar    := lipgloss.JoinHorizontal(lipgloss.Bottom, nameLabel, "  ", variantHint, "   ", counter)
 
 	body := strings.Join([]string{titleBar, "", mockUI}, "\n")
 
