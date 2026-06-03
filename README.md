@@ -13,6 +13,18 @@ The TUI always renders to stderr / `/dev/tty` so it never pollutes the captured 
 
 ---
 
+## Demo
+
+**Basic selection** — navigate with arrows or `j`/`k`, preview pane updates live, `Enter` prints the name to stdout:
+
+![basic selection demo](demo/simple.gif)
+
+**Themes & theme showroom** — pass `--theme <slug>` for a named theme, or use `--theme-showroom` to browse all 16 built-in themes interactively:
+
+![themes demo](demo/themes.gif)
+
+---
+
 ## Features
 
 - **Preview pane** — multi-line item descriptions rendered alongside the list
