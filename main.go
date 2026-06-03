@@ -207,8 +207,15 @@ func dispatch(args []string, defaultName, themeSlug string, height int, listFlag
 	}
 
 	isTTY := term.IsTerminal(int(os.Stdout.Fd()))
+	// /dev/tty accessible → TUI can render there; stdout may still be piped.
+	if !isTTY {
+		if f, err := os.OpenFile("/dev/tty", os.O_RDWR, 0); err == nil {
+			f.Close()
+			isTTY = true
+		}
+	}
 
-	// non-interactive path: --non-interactive flag or stdout not a TTY
+	// non-interactive path: --non-interactive flag or no usable TTY
 	if nonInteractive || !isTTY {
 		if defaultName != "" {
 			fmt.Println(defaultName)
