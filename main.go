@@ -24,11 +24,10 @@ func main() {
 
 func run() int {
 	var (
-		defaultName   string
-		themeSlug     string
-		themeShowroom bool
-		height        int
-		listFlag      bool
+		defaultName    string
+		themeSlug      string
+		height         int
+		listFlag       bool
 		nonInteractive bool
 		noColor        bool
 	)
@@ -62,26 +61,9 @@ binaries without error.
 
 THEMES
 
-  Available themes (--theme <slug> or CHOOZ_THEME=<slug>):
-
-    gum              Gum (charm.sh) — default
-    gruvbox-dark     Gruvbox Dark
-    nord             Nord
-    dracula          Dracula
-    catppuccin-mocha Catppuccin Mocha
-    tokyo-night      Tokyo Night
-    gruvbox-light    Gruvbox Light
-    solarized-light  Solarized Light
-    catppuccin-latte Catppuccin Latte
-    one-light        One Light
-    rose-pine-dawn   Rosé Pine Dawn
-    solarized        Solarized (adaptive light/dark)
-    everforest       Everforest (adaptive light/dark)
-    rose-pine        Rosé Pine (adaptive light/dark)
-    kanagawa         Kanagawa (adaptive light/dark)
-    base16           base16 Default (adaptive light/dark)
-
-  The terminal background is never overridden by any theme.
+  Select a theme with --theme <slug> or CHOOZ_THEME=<slug>.
+  Run 'chooz themes' to list all available themes.
+  Run 'chooz theme-showroom' to browse themes interactively.
 
 ENVIRONMENT
 
@@ -117,7 +99,6 @@ EXIT CODES
 
 	root.Flags().StringVarP(&defaultName, "default", "d", "", "pre-highlight / CI fallback item name")
 	root.Flags().StringVar(&themeSlug, "theme", "", "color theme slug (default: gum)")
-	root.Flags().BoolVar(&themeShowroom, "theme-showroom", false, "browse all built-in themes interactively")
 	root.Flags().IntVar(&height, "height", 0, "max visible list rows")
 	root.Flags().BoolVarP(&listFlag, "list", "l", false, "print all names and exit")
 	root.Flags().BoolVarP(&nonInteractive, "non-interactive", "n", false, "never draw TUI")
@@ -143,13 +124,6 @@ EXIT CODES
 
 	exitCode := 0
 	root.RunE = func(cmd *cobra.Command, args []string) error {
-		if themeShowroom {
-			if err := tui.RunShowroom(); err != nil {
-				fmt.Fprintln(os.Stderr, "error:", err)
-				exitCode = 1
-			}
-			return nil
-		}
 		if len(args) == 0 {
 			fmt.Fprintln(cmd.OutOrStdout(), strings.SplitN(cmd.Long, "\n", 2)[0])
 			fmt.Fprintln(cmd.OutOrStdout())
@@ -160,6 +134,33 @@ EXIT CODES
 		exitCode = dispatch(args, defaultName, themeSlug, height, listFlag, nonInteractive, noColor)
 		return nil
 	}
+
+	root.AddCommand(
+		&cobra.Command{
+			Use:   "themes",
+			Short: "List all available themes",
+			Long:  "List all built-in themes with their slug, name, and variant (dark/light/adaptive).",
+			Args:  cobra.NoArgs,
+			RunE: func(cmd *cobra.Command, _ []string) error {
+				for _, p := range theme.All() {
+					fmt.Fprintf(cmd.OutOrStdout(), "%-18s  %-30s  %s\n", p.Slug, p.Name, p.Variant)
+				}
+				return nil
+			},
+		},
+		&cobra.Command{
+			Use:   "theme-showroom",
+			Short: "Browse all built-in themes interactively",
+			Args:  cobra.NoArgs,
+			RunE: func(_ *cobra.Command, _ []string) error {
+				if err := tui.RunShowroom(); err != nil {
+					fmt.Fprintln(os.Stderr, "error:", err)
+					exitCode = 1
+				}
+				return nil
+			},
+		},
+	)
 
 	if err := root.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)

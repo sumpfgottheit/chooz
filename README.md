@@ -110,7 +110,6 @@ chooz [flags] <file.yaml> [name]
 | `[name]` | Non-interactive: validate and print this item name, then exit 0 |
 | `-d, --default <name>` | Pre-highlight in interactive mode; CI fallback when no TTY |
 | `--theme <slug>` | Color theme (see list below) |
-| `--theme-showroom` | Browse all built-in themes interactively |
 | `-l, --list` | Print all item names, one per line, and exit |
 | `-n, --non-interactive` | Never draw a TUI; requires `[name]` or `--default` |
 | `--height <n>` | Max visible list rows |
@@ -206,10 +205,16 @@ Select with `--theme <slug>` or `CHOOZ_THEME=<slug>`. The terminal background is
 | `kanagawa` | Kanagawa | adaptive |
 | `base16` | base16 Default | adaptive |
 
+List all themes with their variant:
+
+```bash
+chooz themes
+```
+
 Browse all themes interactively:
 
 ```bash
-chooz --theme-showroom
+chooz theme-showroom
 ```
 
 ---
