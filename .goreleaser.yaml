@@ -1,0 +1,101 @@
+version: 2
+
+project_name: chooz
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: chooz
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+    mod_timestamp: "{{.CommitTimestamp}}"
+
+# UPX compression — Linux only; macOS Hardened Runtime blocks UPX decompression.
+upx:
+  - ids: [chooz]
+    enabled: true
+    goos: [linux]
+    goarch: [amd64, arm64]
+    compress: best
+
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE*
+
+checksum:
+  name_template: checksums.txt
+
+nfpms:
+  - id: packages
+    package_name: chooz
+    homepage: https://github.com/sumpfgottheit/chooz
+    maintainer: Florian Sachs <florian.sachs@gmx.at>
+    description: Interactive terminal menu driven by a YAML file. Think gum choose + fzf --preview.
+    license: MIT
+    formats:
+      - deb
+      - rpm
+    bindir: /usr/bin
+    contents:
+      - src: ./README.md
+        dst: /usr/share/doc/chooz/README.md
+    rpm:
+      signature:
+        key_file: "{{ .Env.GPG_KEY_FILE }}"
+
+brews:
+  - name: chooz
+    repository:
+      owner: sumpfgottheit
+      name: homebrew-chooz
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    homepage: https://github.com/sumpfgottheit/chooz
+    description: Interactive terminal menu driven by a YAML file
+    license: MIT
+    install: |
+      bin.install "chooz"
+    test: |
+      system "#{bin}/chooz", "--version"
+
+release:
+  github:
+    owner: sumpfgottheit
+    name: chooz
+  prerelease: auto
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+  groups:
+    - title: Features
+      regexp: "^feat"
+      order: 0
+    - title: Bug fixes
+      regexp: "^fix"
+      order: 1
+    - title: Other
+      order: 999

@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install build tools
+        run: sudo apt-get install -y upx-ucl reprepro createrepo-c
+
+      - name: Prepare GPG signing key
+        run: |
+          echo "${{ secrets.PACKAGES_GPG_KEY }}" > /tmp/gpg-signing.asc
+          echo "${{ secrets.PACKAGES_GPG_KEY }}" | gpg --batch --import
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+          GPG_KEY_FILE: /tmp/gpg-signing.asc
+
+      - name: Checkout packages repo
+        uses: actions/checkout@v4
+        with:
+          repository: sumpfgottheit/packages
+          token: ${{ secrets.PACKAGES_DEPLOY_TOKEN }}
+          path: packages-repo
+
+      - name: Publish DEB packages
+        run: |
+          for deb in dist/*.deb; do
+            reprepro -b packages-repo/apt includedeb stable "$deb"
+          done
+
+      - name: Publish RPM packages
+        run: |
+          mkdir -p packages-repo/rpm/x86_64 packages-repo/rpm/aarch64
+          for f in dist/*.rpm; do
+            case "$f" in
+              *x86_64*) cp "$f" packages-repo/rpm/x86_64/ ;;
+              *aarch64*) cp "$f" packages-repo/rpm/aarch64/ ;;
+            esac
+          done
+          createrepo_c --update packages-repo/rpm/x86_64/
+          createrepo_c --update packages-repo/rpm/aarch64/
+
+      - name: Push to packages repo
+        working-directory: packages-repo
+        run: |
+          git config user.name "goreleaserbot"
+          git config user.email "bot@goreleaser.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "chore: release ${{ github.ref_name }}"
+          git push

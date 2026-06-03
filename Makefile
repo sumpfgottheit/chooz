@@ -1,4 +1,4 @@
-.PHONY: build static tiny test lint vendor clean
+.PHONY: build static tiny test lint vendor clean snapshot release-check
 
 VERSION := $(shell git describe --tags --always 2>/dev/null || echo "dev")
 LDFLAGS := -X main.version=$(VERSION)
@@ -21,5 +21,12 @@ lint:
 vendor:
 	go mod vendor
 
+snapshot:
+	goreleaser release --snapshot --clean
+
+release-check:
+	goreleaser check
+
 clean:
 	rm -f chooz
+	rm -rf dist/
