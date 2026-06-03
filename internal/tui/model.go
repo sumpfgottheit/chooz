@@ -326,7 +326,7 @@ func wrapText(text string, width int) string {
 }
 
 func wrapLine(line string, width int) string {
-	if len(line) <= width {
+	if len([]rune(line)) <= width {
 		return line
 	}
 	words := strings.Fields(line)
@@ -337,31 +337,32 @@ func wrapLine(line string, width int) string {
 	var cur strings.Builder
 	lineLen := 0
 	for _, word := range words {
+		runes := []rune(word)
 		// Hard-break words longer than the available width
-		for len(word) > width {
+		for len(runes) > width {
 			if lineLen > 0 {
 				result = append(result, cur.String())
 				cur.Reset()
 				lineLen = 0
 			}
-			result = append(result, word[:width])
-			word = word[width:]
+			result = append(result, string(runes[:width]))
+			runes = runes[width:]
 		}
-		if len(word) == 0 {
+		if len(runes) == 0 {
 			continue
 		}
-		wl := len(word)
+		wl := len(runes)
 		if lineLen == 0 {
-			cur.WriteString(word)
+			cur.WriteString(string(runes))
 			lineLen = wl
 		} else if lineLen+1+wl > width {
 			result = append(result, cur.String())
 			cur.Reset()
-			cur.WriteString(word)
+			cur.WriteString(string(runes))
 			lineLen = wl
 		} else {
 			cur.WriteByte(' ')
-			cur.WriteString(word)
+			cur.WriteString(string(runes))
 			lineLen += 1 + wl
 		}
 	}

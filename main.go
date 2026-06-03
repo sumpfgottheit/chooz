@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"fmt"
 	"os"
 	"strings"
@@ -218,13 +219,7 @@ func dispatch(args []string, defaultName, themeSlug string, height int, listFlag
 	}
 
 	// Resolve theme: --theme > CHOOZ_THEME env > YAML > gum (default)
-	resolvedTheme := themeSlug
-	if resolvedTheme == "" {
-		resolvedTheme = os.Getenv("CHOOZ_THEME")
-	}
-	if resolvedTheme == "" {
-		resolvedTheme = menu.Theme.Name
-	}
+	resolvedTheme := cmp.Or(themeSlug, os.Getenv("CHOOZ_THEME"), menu.Theme.Name)
 
 	thm := theme.New(resolvedTheme, noColor)
 	result, err := tui.Run(menu, thm, defaultName, height)
