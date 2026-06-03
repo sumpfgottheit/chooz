@@ -59,8 +59,8 @@ jobs:
           mkdir -p packages-repo/rpm/x86_64 packages-repo/rpm/aarch64
           for f in dist/*.rpm; do
             case "$f" in
-              *x86_64*) cp "$f" packages-repo/rpm/x86_64/ ;;
-              *aarch64*) cp "$f" packages-repo/rpm/aarch64/ ;;
+              *amd64*) cp "$f" packages-repo/rpm/x86_64/ ;;
+              *arm64*) cp "$f" packages-repo/rpm/aarch64/ ;;
             esac
           done
           createrepo_c --update packages-repo/rpm/x86_64/
