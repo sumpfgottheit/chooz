@@ -40,16 +40,34 @@ Type "./chooz theme-showroom"
 Enter
 Sleep 1s
 Right
-Sleep 700ms
+Sleep 800ms
 Right
-Sleep 700ms
+Sleep 800ms
 Right
-Sleep 700ms
+Sleep 800ms
 Right
-Sleep 700ms
+Sleep 800ms
 Right
-Sleep 700ms
+Sleep 800ms
 Right
-Sleep 700ms
+Sleep 800ms
+Right
+Sleep 800ms
+Right
+Sleep 800ms
+Right
+Sleep 800ms
+Right
+Sleep 800ms
+Right
+Sleep 800ms
+Right
+Sleep 800ms
+Right
+Sleep 800ms
+Right
+Sleep 800ms
+Right
+Sleep 800ms
 Type "q"
 Sleep 800ms
