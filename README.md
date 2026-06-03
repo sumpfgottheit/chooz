@@ -25,10 +25,53 @@ The TUI always renders to stderr / `/dev/tty` so it never pollutes the captured 
 
 ## Installation
 
+### Homebrew (macOS / Linux)
+
+```bash
+brew tap sumpfgottheit/chooz
+brew install chooz
+```
+
+### Debian / Ubuntu
+
+```bash
+curl -fsSL https://sumpfgottheit.github.io/packages/gpg.key \
+  | sudo gpg --dearmor -o /etc/apt/keyrings/sumpfgottheit.gpg
+
+echo "deb [signed-by=/etc/apt/keyrings/sumpfgottheit.gpg] \
+  https://sumpfgottheit.github.io/packages/apt stable main" \
+  | sudo tee /etc/apt/sources.list.d/chooz.list
+
+sudo apt update && sudo apt install chooz
+```
+
+### Fedora / RHEL / CentOS
+
+```bash
+sudo rpm --import https://sumpfgottheit.github.io/packages/gpg.key
+
+sudo tee /etc/yum.repos.d/chooz.repo <<'EOF'
+[chooz]
+name=chooz packages
+baseurl=https://sumpfgottheit.github.io/packages/rpm/$basearch/
+enabled=1
+gpgcheck=1
+gpgkey=https://sumpfgottheit.github.io/packages/gpg.key
+EOF
+
+sudo dnf install chooz
+```
+
+### Binary download
+
+Pre-built binaries for Linux (amd64/arm64) and macOS (amd64/arm64) are available on the
+[Releases page](https://github.com/sumpfgottheit/chooz/releases). Each release includes a
+`checksums.txt` for verification.
+
 ### From source
 
 ```bash
-git clone https://github.com/saf/chooz
+git clone https://github.com/sumpfgottheit/chooz
 cd chooz
 make static        # CGO_ENABLED=0, trimpath, stripped
 sudo mv chooz /usr/local/bin/
