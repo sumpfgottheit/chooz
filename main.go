@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
@@ -208,10 +209,13 @@ func dispatch(args []string, defaultName, themeSlug string, height int, listFlag
 
 	isTTY := term.IsTerminal(int(os.Stdout.Fd()))
 	// /dev/tty accessible → TUI can render there; stdout may still be piped.
+	// Keep the file open so the Lipgloss renderer can query its color profile
+	// throughout the TUI session (e.g. S=$(chooz menu.yaml) still gets colors).
 	if !isTTY {
 		if f, err := os.OpenFile("/dev/tty", os.O_RDWR, 0); err == nil {
-			f.Close()
+			defer f.Close()
 			isTTY = true
+			lipgloss.SetDefaultRenderer(lipgloss.NewRenderer(f))
 		}
 	}
 
