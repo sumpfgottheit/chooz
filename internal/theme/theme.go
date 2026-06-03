@@ -27,7 +27,7 @@ type Theme struct {
 // Slug resolution order: slug arg → NO_COLOR env → gum fallback.
 // Returns plain unstyled output when noColor is true or NO_COLOR is set.
 func New(slug string, noColor bool) *Theme {
-	if noColor || os.Getenv("NO_COLOR") != "" {
+	if _, noColorSet := os.LookupEnv("NO_COLOR"); noColor || noColorSet {
 		return &Theme{NoColor: true}
 	}
 

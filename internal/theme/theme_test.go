@@ -1,8 +1,25 @@
 package theme
 
 import (
+	"os"
 	"testing"
 )
+
+// unsetNoColor removes NO_COLOR from the environment for the duration of the
+// test, restoring it afterwards. Use instead of t.Setenv("NO_COLOR", "")
+// because a set-but-empty NO_COLOR still disables colors per the spec.
+func unsetNoColor(t *testing.T) {
+	t.Helper()
+	prev, wasSet := os.LookupEnv("NO_COLOR")
+	os.Unsetenv("NO_COLOR")
+	t.Cleanup(func() {
+		if wasSet {
+			os.Setenv("NO_COLOR", prev)
+		} else {
+			os.Unsetenv("NO_COLOR")
+		}
+	})
+}
 
 func TestNoColorFlag(t *testing.T) {
 	thm := New("gum", true)
@@ -20,15 +37,16 @@ func TestNoColorEnv(t *testing.T) {
 }
 
 func TestNoColorEnvEmpty(t *testing.T) {
+	// Per nocolor.org: presence of the variable (even empty) disables colors.
 	t.Setenv("NO_COLOR", "")
 	thm := New("gum", false)
-	if thm.NoColor {
-		t.Error("expected NoColor=false when NO_COLOR env is empty")
+	if !thm.NoColor {
+		t.Error("expected NoColor=true when NO_COLOR is set (even to empty string)")
 	}
 }
 
 func TestDefaultTheme(t *testing.T) {
-	t.Setenv("NO_COLOR", "")
+	unsetNoColor(t)
 	thm := New("", false)
 	if thm.NoColor {
 		t.Error("expected NoColor=false for default theme")
@@ -48,7 +66,7 @@ func TestDefaultTheme(t *testing.T) {
 }
 
 func TestUnknownSlugFallsBackToGum(t *testing.T) {
-	t.Setenv("NO_COLOR", "")
+	unsetNoColor(t)
 	p := Lookup("does-not-exist")
 	if p.Slug != "gum" {
 		t.Errorf("expected gum fallback, got %q", p.Slug)
@@ -56,7 +74,7 @@ func TestUnknownSlugFallsBackToGum(t *testing.T) {
 }
 
 func TestAllSlugsResolvable(t *testing.T) {
-	t.Setenv("NO_COLOR", "")
+	unsetNoColor(t)
 	for _, slug := range Slugs() {
 		p := Lookup(slug)
 		if p.Slug != slug {
@@ -66,7 +84,7 @@ func TestAllSlugsResolvable(t *testing.T) {
 }
 
 func TestSlugCaseInsensitiveViaNew(t *testing.T) {
-	t.Setenv("NO_COLOR", "")
+	unsetNoColor(t)
 	// New() lowercases before Lookup; Lookup itself is case-sensitive.
 	thm := New("NORD", false)
 	if thm.NoColor {
@@ -75,7 +93,7 @@ func TestSlugCaseInsensitiveViaNew(t *testing.T) {
 }
 
 func TestKnownThemes(t *testing.T) {
-	t.Setenv("NO_COLOR", "")
+	unsetNoColor(t)
 	for _, slug := range []string{"nord", "dracula", "tokyo-night", "catppuccin-mocha", "everforest"} {
 		thm := New(slug, false)
 		if thm.NoColor {
@@ -85,7 +103,7 @@ func TestKnownThemes(t *testing.T) {
 }
 
 func TestVariantField(t *testing.T) {
-	t.Setenv("NO_COLOR", "")
+	unsetNoColor(t)
 	valid := map[string]bool{"dark": true, "light": true, "adaptive": true}
 	darkSlugs := []string{"gum", "gruvbox-dark", "nord", "dracula", "catppuccin-mocha", "tokyo-night"}
 	lightSlugs := []string{"gruvbox-light", "solarized-light", "catppuccin-latte", "one-light", "rose-pine-dawn"}

@@ -1,6 +1,10 @@
 package theme
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"slices"
+
+	"github.com/charmbracelet/lipgloss"
+)
 
 // Palette holds the colors needed to style chooz's UI.
 // Bg is intentionally absent — the terminal background is always used.
@@ -99,15 +103,13 @@ var catalog = []Palette{
 	},
 }
 
-// Lookup finds a Palette by slug (case-insensitive). Returns the gum palette
-// as fallback when slug is empty or unknown.
+// Lookup finds a Palette by slug. Returns the gum palette as fallback when
+// slug is empty or unknown. New() lowercases before calling Lookup.
 func Lookup(slug string) Palette {
-	for _, p := range catalog {
-		if p.Slug == slug {
-			return p
-		}
+	if i := slices.IndexFunc(catalog, func(p Palette) bool { return p.Slug == slug }); i >= 0 {
+		return catalog[i]
 	}
-	return catalog[0] // gum
+	return catalog[0] // gum fallback
 }
 
 // All returns every Palette in catalog order.

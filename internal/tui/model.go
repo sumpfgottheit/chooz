@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
 
 	"github.com/saf/chooz/internal/config"
 	"github.com/saf/chooz/internal/theme"
@@ -326,7 +327,7 @@ func wrapText(text string, width int) string {
 }
 
 func wrapLine(line string, width int) string {
-	if len([]rune(line)) <= width {
+	if runewidth.StringWidth(line) <= width {
 		return line
 	}
 	words := strings.Fields(line)
@@ -337,32 +338,34 @@ func wrapLine(line string, width int) string {
 	var cur strings.Builder
 	lineLen := 0
 	for _, word := range words {
-		runes := []rune(word)
-		// Hard-break words longer than the available width
-		for len(runes) > width {
+		// Hard-break words wider than the available column width.
+		// runewidth.Truncate cuts at rune boundaries and accounts for
+		// double-width characters (CJK, emoji).
+		for runewidth.StringWidth(word) > width {
 			if lineLen > 0 {
 				result = append(result, cur.String())
 				cur.Reset()
 				lineLen = 0
 			}
-			result = append(result, string(runes[:width]))
-			runes = runes[width:]
+			chunk := runewidth.Truncate(word, width, "")
+			result = append(result, chunk)
+			word = word[len(chunk):]
 		}
-		if len(runes) == 0 {
+		if word == "" {
 			continue
 		}
-		wl := len(runes)
+		wl := runewidth.StringWidth(word)
 		if lineLen == 0 {
-			cur.WriteString(string(runes))
+			cur.WriteString(word)
 			lineLen = wl
 		} else if lineLen+1+wl > width {
 			result = append(result, cur.String())
 			cur.Reset()
-			cur.WriteString(string(runes))
+			cur.WriteString(word)
 			lineLen = wl
 		} else {
 			cur.WriteByte(' ')
-			cur.WriteString(string(runes))
+			cur.WriteString(word)
 			lineLen += 1 + wl
 		}
 	}
@@ -372,16 +375,15 @@ func wrapLine(line string, width int) string {
 	return strings.Join(result, "\n")
 }
 
-// truncate shortens s to max runes, appending "…" if trimmed.
+// truncate shortens s to max terminal display cells, appending "…" if trimmed.
 func truncate(s string, max int) string {
-	runes := []rune(s)
-	if max <= 0 || len(runes) <= max {
+	if max <= 0 || runewidth.StringWidth(s) <= max {
 		return s
 	}
 	if max == 1 {
 		return "…"
 	}
-	return string(runes[:max-1]) + "…"
+	return runewidth.Truncate(s, max-1, "") + "…"
 }
 
 // Run starts the interactive TUI and returns the selected item name.

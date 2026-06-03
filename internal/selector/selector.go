@@ -2,6 +2,7 @@ package selector
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/saf/chooz/internal/config"
 )
@@ -17,10 +18,8 @@ func (e ErrNotFound) Error() string {
 
 // Resolve finds the item with the given name.
 func Resolve(items []config.Item, name string) (*config.Item, error) {
-	for i := range items {
-		if items[i].Name == name {
-			return &items[i], nil
-		}
+	if i := slices.IndexFunc(items, func(it config.Item) bool { return it.Name == name }); i >= 0 {
+		return &items[i], nil
 	}
 	return nil, ErrNotFound{Name: name}
 }
@@ -40,10 +39,8 @@ func DefaultIndex(items []config.Item, name string) (int, error) {
 	if name == "" {
 		return 0, nil
 	}
-	for i, item := range items {
-		if item.Name == name {
-			return i, nil
-		}
+	if i := slices.IndexFunc(items, func(it config.Item) bool { return it.Name == name }); i >= 0 {
+		return i, nil
 	}
 	return 0, ErrNotFound{Name: name}
 }
