@@ -58,27 +58,29 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 
 // Model is the Bubble Tea model for the interactive menu.
 type Model struct {
-	list        list.Model
-	viewport    viewport.Model
-	items       []config.Item
-	menu        *config.Menu
-	thm         *theme.Theme
-	maxHeight   int
-	width       int
-	height      int
-	selected    string
-	cancelled   bool
-	ready       bool
-	hasAnyDesc  bool // true if at least one item has a description
+	list       list.Model
+	viewport   viewport.Model
+	allItems   []list.Item // full unfiltered item set
+	items      []config.Item
+	menu       *config.Menu
+	thm        *theme.Theme
+	filter     string
+	maxHeight  int
+	width      int
+	height     int
+	selected   string
+	cancelled  bool
+	ready      bool
+	hasAnyDesc bool // true if at least one item has a description
 }
 
 func newModel(menu *config.Menu, thm *theme.Theme, defaultName string, maxHeight int) Model {
-	listItems := make([]list.Item, len(menu.Items))
+	allItems := make([]list.Item, len(menu.Items))
 	for i, item := range menu.Items {
-		listItems[i] = menuItem{item: item}
+		allItems[i] = menuItem{item: item}
 	}
 
-	l := list.New(listItems, itemDelegate{thm: thm}, 0, 0)
+	l := list.New(allItems, itemDelegate{thm: thm}, 0, 0)
 	l.SetShowTitle(false)
 	l.SetShowStatusBar(false)
 	l.SetShowFilter(false)
@@ -106,6 +108,7 @@ func newModel(menu *config.Menu, thm *theme.Theme, defaultName string, maxHeight
 	return Model{
 		list:       l,
 		viewport:   viewport.New(0, 0),
+		allItems:   allItems,
 		items:      menu.Items,
 		menu:       menu,
 		thm:        thm,
@@ -128,26 +131,62 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
+		// Always-handled keys regardless of filter state.
 		switch msg.String() {
+		case "ctrl+c":
+			m.cancelled = true
+			return m, tea.Quit
+		case "esc":
+			if m.filter != "" {
+				m.filter = ""
+				m = m.applyFilter()
+				return m, nil
+			}
+			m.cancelled = true
+			return m, tea.Quit
 		case "enter":
 			if item, ok := m.list.SelectedItem().(menuItem); ok {
 				m.selected = item.item.Name
 			}
 			return m, tea.Quit
-		case "esc", "ctrl+c", "q":
-			m.cancelled = true
-			return m, tea.Quit
-		case "pgup", "ctrl+b":
-			var cmd tea.Cmd
-			m.viewport, cmd = m.viewport.Update(msg)
-			return m, cmd
-		case "pgdown", "ctrl+f":
+		case "backspace":
+			if len(m.filter) > 0 {
+				runes := []rune(m.filter)
+				m.filter = string(runes[:len(runes)-1])
+				m = m.applyFilter()
+			}
+			return m, nil
+		case "pgup", "ctrl+b", "pgdown", "ctrl+f":
 			var cmd tea.Cmd
 			m.viewport, cmd = m.viewport.Update(msg)
 			return m, cmd
 		}
+
+		// When filter is active: runes extend the filter; other keys (arrows)
+		// fall through to list navigation below.
+		if m.filter != "" {
+			if msg.Type == tea.KeyRunes {
+				m.filter += string(msg.Runes)
+				m = m.applyFilter()
+				return m, nil
+			}
+		} else {
+			// Filter is empty: q quits; runes start the filter.
+			switch msg.String() {
+			case "q":
+				m.cancelled = true
+				return m, tea.Quit
+			}
+			if msg.Type == tea.KeyRunes {
+				m.filter += string(msg.Runes)
+				m = m.applyFilter()
+				return m, nil
+			}
+		}
 	}
 
+	// Default: pass through to list (handles ↑/↓/j/k/g/G when filter is empty,
+	// and ↑/↓ arrow keys when filter is active).
 	prevIdx := m.list.Index()
 	var cmd tea.Cmd
 	m.list, cmd = m.list.Update(msg)
@@ -204,7 +243,25 @@ func (m Model) View() string {
 	}
 
 	sb.WriteString("\n")
-	hint := "↑/↓/j/k: navigate • enter: select • q/esc: cancel"
+
+	// Filter line.
+	if m.filter == "" {
+		placeholder := "  / type to filter"
+		if m.thm.NoColor {
+			sb.WriteString(placeholder + "\n")
+		} else {
+			sb.WriteString(m.thm.Help.Render(placeholder) + "\n")
+		}
+	} else {
+		if m.thm.NoColor {
+			sb.WriteString("  / " + m.filter + "\n")
+		} else {
+			sb.WriteString(m.thm.Help.Render("  / ") + m.thm.Selected.Render(m.filter) + "\n")
+		}
+	}
+
+	// Help line.
+	hint := "↑/↓/j/k: navigate • enter: select • esc/q: cancel • backspace: clear filter"
 	if m.hasAnyDesc {
 		hint += " • pgup/pgdn: scroll preview"
 	}
@@ -217,6 +274,27 @@ func (m Model) View() string {
 	return sb.String()
 }
 
+// applyFilter re-filters the list based on m.filter and resets selection to 0.
+func (m Model) applyFilter() Model {
+	q := strings.ToLower(m.filter)
+	if q == "" {
+		m.list.SetItems(m.allItems)
+	} else {
+		var filtered []list.Item
+		for _, item := range m.allItems {
+			mi := item.(menuItem)
+			label := strings.ToLower(mi.item.DisplayLabel())
+			name := strings.ToLower(mi.item.Name)
+			if strings.Contains(label, q) || strings.Contains(name, q) {
+				filtered = append(filtered, item)
+			}
+		}
+		m.list.SetItems(filtered)
+	}
+	m.list.Select(0)
+	return m.withPreview()
+}
+
 // withLayout recalculates list and viewport sizes from the current terminal dimensions.
 func (m Model) withLayout() Model {
 	headerLines := 0
@@ -227,10 +305,10 @@ func (m Model) withLayout() Model {
 		headerLines += strings.Count(m.menu.Description, "\n") + 1
 	}
 
-	const helpLines = 1
+	const footerLines = 2 // filter line + help line
 	const padding = 2
 
-	contentH := m.height - headerLines - helpLines - padding
+	contentH := m.height - headerLines - footerLines - padding
 	if contentH < 3 {
 		contentH = 3
 	}
@@ -275,8 +353,6 @@ func (m Model) withLayout() Model {
 }
 
 // withPreview updates the viewport content for the currently selected item.
-// The preview always shows the full title; if a description exists it follows
-// after a separator line.
 func (m Model) withPreview() Model {
 	if m.viewport.Width <= 0 {
 		return m
@@ -338,9 +414,6 @@ func wrapLine(line string, width int) string {
 	var cur strings.Builder
 	lineLen := 0
 	for _, word := range words {
-		// Hard-break words wider than the available column width.
-		// runewidth.Truncate cuts at rune boundaries and accounts for
-		// double-width characters (CJK, emoji).
 		for runewidth.StringWidth(word) > width {
 			if lineLen > 0 {
 				result = append(result, cur.String())
