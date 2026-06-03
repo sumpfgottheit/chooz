@@ -13,37 +13,43 @@ Down
 Sleep 500ms
 Down
 Sleep 500ms
-Down
-Sleep 500ms
 Escape
-Sleep 700ms
+Sleep 600ms
 
-Type "./chooz --theme dracula testdata/big.yaml"
+Type "./chooz --theme one-light testdata/big.yaml"
 Enter
 Sleep 1s
 Down
 Sleep 500ms
 Down
 Sleep 500ms
+Escape
+Sleep 600ms
+
+Type "./chooz --theme everforest testdata/big.yaml"
+Enter
+Sleep 1s
+Down
+Sleep 500ms
 Down
 Sleep 500ms
 Escape
-Sleep 700ms
+Sleep 600ms
 
 Type "./chooz theme-showroom"
 Enter
 Sleep 1s
 Right
-Sleep 800ms
+Sleep 700ms
 Right
-Sleep 800ms
+Sleep 700ms
 Right
-Sleep 800ms
+Sleep 700ms
 Right
-Sleep 800ms
+Sleep 700ms
 Right
-Sleep 800ms
+Sleep 700ms
 Right
-Sleep 800ms
+Sleep 700ms
 Type "q"
 Sleep 800ms
