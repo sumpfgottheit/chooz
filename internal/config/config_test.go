@@ -166,3 +166,25 @@ func TestLoadDuplicateName(t *testing.T) {
 		t.Fatal("expected error for duplicate_name.yaml")
 	}
 }
+
+func TestLoadMinimalYaml(t *testing.T) {
+	menu, err := Load("../../testdata/minimal.yaml")
+	if err != nil {
+		t.Fatalf("Load minimal.yaml: %v", err)
+	}
+	if len(menu.Items) == 0 {
+		t.Fatal("expected non-empty items")
+	}
+	for _, item := range menu.Items {
+		if item.Title != "" {
+			t.Errorf("item %q: expected no title, got %q", item.Name, item.Title)
+		}
+		if item.Description != "" {
+			t.Errorf("item %q: expected no description, got %q", item.Name, item.Description)
+		}
+		// DisplayLabel must fall back to name when title is absent
+		if item.DisplayLabel() != item.Name {
+			t.Errorf("item %q: DisplayLabel() = %q, want name", item.Name, item.DisplayLabel())
+		}
+	}
+}

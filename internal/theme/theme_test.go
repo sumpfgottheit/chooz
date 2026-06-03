@@ -62,10 +62,11 @@ func TestAllSlugsResolvable(t *testing.T) {
 	}
 }
 
-func TestSlugCaseInsensitive(t *testing.T) {
-	p := Lookup("GUM")
-	if p.Slug != "gum" {
-		t.Errorf("expected gum for uppercase GUM, got %q", p.Slug)
+func TestSlugCaseInsensitiveViaNew(t *testing.T) {
+	// New() lowercases before Lookup; Lookup itself is case-sensitive.
+	thm := New("NORD", false)
+	if thm.NoColor {
+		t.Error("expected styled theme for uppercase slug NORD")
 	}
 }
 
@@ -74,6 +75,34 @@ func TestKnownThemes(t *testing.T) {
 		thm := New(slug, false)
 		if thm.NoColor {
 			t.Errorf("theme %q: unexpected NoColor=true", slug)
+		}
+	}
+}
+
+func TestVariantField(t *testing.T) {
+	valid := map[string]bool{"dark": true, "light": true, "adaptive": true}
+	darkSlugs := []string{"gum", "gruvbox-dark", "nord", "dracula", "catppuccin-mocha", "tokyo-night"}
+	lightSlugs := []string{"gruvbox-light", "solarized-light", "catppuccin-latte", "one-light", "rose-pine-dawn"}
+	adaptiveSlugs := []string{"solarized", "everforest", "rose-pine", "kanagawa", "base16"}
+
+	for _, p := range All() {
+		if !valid[p.Variant] {
+			t.Errorf("slug %q: invalid Variant %q", p.Slug, p.Variant)
+		}
+	}
+	for _, slug := range darkSlugs {
+		if p := Lookup(slug); p.Variant != "dark" {
+			t.Errorf("slug %q: want Variant=dark, got %q", slug, p.Variant)
+		}
+	}
+	for _, slug := range lightSlugs {
+		if p := Lookup(slug); p.Variant != "light" {
+			t.Errorf("slug %q: want Variant=light, got %q", slug, p.Variant)
+		}
+	}
+	for _, slug := range adaptiveSlugs {
+		if p := Lookup(slug); p.Variant != "adaptive" {
+			t.Errorf("slug %q: want Variant=adaptive, got %q", slug, p.Variant)
 		}
 	}
 }
