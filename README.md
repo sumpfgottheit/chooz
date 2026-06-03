@@ -19,11 +19,11 @@ The TUI always renders to stderr / `/dev/tty` so it never pollutes the captured 
 
 ![basic selection demo](demo/simple.gif)
 
-**Themes — dark terminal** — `--theme <slug>` picks a named theme; `chooz theme-showroom` lets you browse all 16 interactively:
+**Themes — dark terminal** — shows a dark theme (nord), a light theme (one-light), and an adaptive theme (everforest), then the full showroom cycling through all 16:
 
 ![themes dark demo](demo/themes_dark.gif)
 
-**Themes — light terminal:**
+**Themes — light terminal** — shows a dark theme (dracula), a light theme (catppuccin-latte), and an adaptive theme (kanagawa), then the full showroom:
 
 ![themes light demo](demo/themes_light.gif)
 
