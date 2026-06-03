@@ -50,7 +50,7 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 		return
 	}
 	if index == m.Index() {
-		fmt.Fprint(w, d.thm.Cursor.Render(">")+" "+d.thm.Selected.Render(label))
+		fmt.Fprint(w, d.thm.Cursor.Render("> ")+d.thm.Selected.Render(label))
 	} else {
 		fmt.Fprint(w, d.thm.Item.Render("  "+label))
 	}
