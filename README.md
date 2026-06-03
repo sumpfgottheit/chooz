@@ -190,6 +190,11 @@ theme:
 
 Select with `--theme <slug>` or `CHOOZ_THEME=<slug>`. The terminal background is never overridden.
 
+Themes come in three variants:
+- **dark** — fixed palette designed for dark terminals
+- **light** — fixed palette designed for light terminals
+- **adaptive** — palette shifts automatically based on the terminal's detected background
+
 | Slug | Name | Type |
 |---|---|---|
 | `gum` | Gum (charm.sh) — **default** | dark |
