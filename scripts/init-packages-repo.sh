@@ -88,7 +88,7 @@ sudo rpm --import https://sumpfgottheit.github.io/packages/gpg.key
 sudo tee /etc/yum.repos.d/chooz.repo &lt;&lt;'EOF'
 [chooz]
 name=chooz packages
-baseurl=https://sumpfgottheit.github.io/packages/rpm/$basearch/
+baseurl=https://cloud.sumpfgottheit.casa/rpms/rocky/9/$basearch/
 enabled=1
 gpgcheck=1
 gpgkey=https://sumpfgottheit.github.io/packages/gpg.key

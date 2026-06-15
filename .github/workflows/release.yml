@@ -24,7 +24,7 @@ jobs:
           go-version-file: go.mod
 
       - name: Install build tools
-        run: sudo apt-get install -y upx-ucl reprepro createrepo-c
+        run: sudo apt-get install -y upx-ucl reprepro createrepo-c openssh-client rsync
 
       - name: Prepare GPG signing key
         run: |
@@ -54,18 +54,6 @@ jobs:
             reprepro -b packages-repo/apt includedeb stable "$deb"
           done
 
-      - name: Publish RPM packages
-        run: |
-          mkdir -p packages-repo/rpm/x86_64 packages-repo/rpm/aarch64
-          for f in dist/*.rpm; do
-            case "$f" in
-              *amd64*) cp "$f" packages-repo/rpm/x86_64/ ;;
-              *arm64*) cp "$f" packages-repo/rpm/aarch64/ ;;
-            esac
-          done
-          createrepo_c --update packages-repo/rpm/x86_64/
-          createrepo_c --update packages-repo/rpm/aarch64/
-
       - name: Push to packages repo
         working-directory: packages-repo
         run: |
@@ -74,3 +62,63 @@ jobs:
           git add -A
           git diff --cached --quiet || git commit -m "chore: release ${{ github.ref_name }}"
           git push
+
+      - name: Configure RPM repo SSH deploy key
+        env:
+          PACAKGES_DEPLOY_SSH_KEY: ${{ secrets.PACAKGES_DEPLOY_SSH_KEY }}
+          PACKAGES_DEPLOY_SSH_KEY: ${{ secrets.PACKAGES_DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 0700 -d "$HOME/.ssh"
+          deploy_key="${PACAKGES_DEPLOY_SSH_KEY:-${PACKAGES_DEPLOY_SSH_KEY:-}}"
+          test -n "$deploy_key"
+          printf '%s\n' "$deploy_key" > "$HOME/.ssh/id_ed25519"
+          chmod 0600 "$HOME/.ssh/id_ed25519"
+          ssh-keygen -y -f "$HOME/.ssh/id_ed25519" >/dev/null
+          cat > "$HOME/.ssh/known_hosts" <<'EOF'
+          cloud.sumpfgottheit.casa ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBGFKlCQmWOnGldSWv3tZiaO2mvo6lnnxnBIfzLHeHcb/JEhM4yzwuWjYknEqzTPuCBdimAdvM5fZ+OrjiW2NBrw=
+          cloud.sumpfgottheit.casa ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC0s5gNgS+O68T9A1YYYFA2g1M3Nc0tsITgtBp/A95yajs8GKn6Bwb4y5IYKljvAjqEYljXNk28i3gTrH6i5VXXwVGoV/2OTJsuMBVQjdi8KA34ubvHuLD9AvD6kea/xX9USmzOGPfAHoAlfsH+jULmAU2xdz2fPgud5fCw8/2KJ9sNRAEzKQ8rLxO+JYzRbt0u3FA+mD2L1lN+u1vFzhAFTycxOG2dfQD7VM/KDb5oDglD2o6zrrIetInswrNqXXAxeGU1YbXl2QGw2g176PMouxd0PCAksCw5/UvTUGo3b7Iagb2wMu5F8/7UdoCpGybUKqweZn6MPOlKwDwMYux/cjheqIPhuvbh9PkKxTBKrDHRi1x62hqZh0B78n3FD9csWlKRr+Lj97uDUGN+W5h8CGOcM0fGEiQrAxzyKmN5+nnVs+05P9lZuHyLW9qgAGXhcJMlBgkkC+FziCgi1386FEsDFtcXfJjzFYByGvmdc4iLNeft+mOdWE/9fsJUnj0=
+          cloud.sumpfgottheit.casa ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE3sHejViWGvp+Rdm6EGGTnCoWPDJUXMp5Otaw+z7pKV
+          EOF
+          sed -i 's/^          //' "$HOME/.ssh/known_hosts"
+          chmod 0644 "$HOME/.ssh/known_hosts"
+
+      - name: Prepare RPM repositories
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          remote="repo-deploy@cloud.sumpfgottheit.casa"
+          ssh_cmd="ssh -i $HOME/.ssh/id_ed25519 -o IdentitiesOnly=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o StrictHostKeyChecking=yes"
+
+          stage_arch() {
+            local arch="$1"
+            local remote_path="/srv/rpms/rocky/9/$arch"
+            local repo_dir="repo-rpm/$arch"
+            shift
+
+            mkdir -p "$repo_dir"
+            $ssh_cmd "$remote" "mkdir -p '$remote_path'"
+            rsync -az -e "$ssh_cmd" "$remote:$remote_path/" "$repo_dir/"
+
+            if [ "$#" -eq 0 ]; then
+              echo "no RPM artifact found for $arch" >&2
+              exit 1
+            fi
+
+            cp "$@" "$repo_dir/"
+            createrepo_c --update "$repo_dir/"
+          }
+
+          stage_arch x86_64 dist/*amd64*.rpm dist/*x86_64*.rpm
+          stage_arch aarch64 dist/*arm64*.rpm dist/*aarch64*.rpm
+
+      - name: Deploy RPM repositories
+        run: |
+          set -euo pipefail
+          remote="repo-deploy@cloud.sumpfgottheit.casa"
+          ssh_cmd="ssh -i $HOME/.ssh/id_ed25519 -o IdentitiesOnly=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o StrictHostKeyChecking=yes"
+
+          for arch in x86_64 aarch64; do
+            rsync -az --delete --delay-updates -e "$ssh_cmd" "repo-rpm/$arch/" "$remote:/srv/rpms/rocky/9/$arch/"
+          done
