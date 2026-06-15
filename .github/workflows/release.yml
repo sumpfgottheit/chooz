@@ -94,9 +94,17 @@ jobs:
       - name: Deploy RPM repositories
         run: |
           set -euo pipefail
+          shopt -s nullglob
+
           remote="repo-deploy@cloud.sumpfgottheit.casa"
           ssh_cmd="ssh -i $HOME/.ssh/id_ed25519 -o IdentitiesOnly=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o StrictHostKeyChecking=yes"
 
           for arch in x86_64 aarch64; do
-            rsync -az --delete --delay-updates -e "$ssh_cmd" "repo-rpm/$arch/" "$remote:/srv/rpms/rocky/9/$arch/"
+            rpms=("repo-rpm/$arch"/chooz_*.rpm)
+            if [ "${#rpms[@]}" -eq 0 ]; then
+              echo "no chooz RPM artifact found for $arch" >&2
+              exit 1
+            fi
+
+            rsync -az --delay-updates -e "$ssh_cmd" "${rpms[@]}" "repo-rpm/$arch/repodata" "$remote:/srv/rpms/rocky/9/$arch/"
           done
