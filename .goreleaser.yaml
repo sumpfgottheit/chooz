@@ -48,7 +48,6 @@ nfpms:
     description: Interactive terminal menu driven by a YAML file. Think gum choose + fzf --preview.
     license: MIT
     formats:
-      - deb
       - rpm
     bindir: /usr/bin
     contents:

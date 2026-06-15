@@ -48,20 +48,7 @@ brew tap sumpfgottheit/chooz
 brew install chooz
 ```
 
-### Debian / Ubuntu
-
-```bash
-curl -fsSL https://sumpfgottheit.github.io/packages/gpg.key \
-  | sudo gpg --dearmor -o /etc/apt/keyrings/sumpfgottheit.gpg
-
-echo "deb [signed-by=/etc/apt/keyrings/sumpfgottheit.gpg] \
-  https://sumpfgottheit.github.io/packages/apt stable main" \
-  | sudo tee /etc/apt/sources.list.d/chooz.list
-
-sudo apt update && sudo apt install chooz
-```
-
-### Fedora / RHEL / CentOS
+### Rocky Linux 9 / RHEL-compatible
 
 ```bash
 sudo rpm --import https://sumpfgottheit.github.io/packages/gpg.key

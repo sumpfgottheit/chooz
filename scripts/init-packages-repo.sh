@@ -8,7 +8,7 @@ set -euo pipefail
 PACKAGES_REPO="${1:?Usage: $0 <path-to-packages-repo>}"
 PACKAGES_REPO="$(realpath "$PACKAGES_REPO")"
 
-for cmd in gpg reprepro createrepo_c; do
+for cmd in gpg; do
   command -v "$cmd" >/dev/null 2>&1 || { echo "Error: $cmd not found — install it first"; exit 1; }
 done
 
@@ -32,24 +32,6 @@ FINGERPRINT=$(gpg --list-keys --with-colons 'packages@sumpfgottheit.github.io' \
   | awk -F: '/^fpr/{print $10; exit}')
 echo "    Key fingerprint: $FINGERPRINT"
 
-echo "==> Initialising APT repo structure"
-mkdir -p "$PACKAGES_REPO/apt/conf"
-cat > "$PACKAGES_REPO/apt/conf/distributions" <<EOF
-Origin: sumpfgottheit
-Label: chooz packages
-Suite: stable
-Codename: stable
-Architectures: amd64 arm64
-Components: main
-Description: chooz - interactive terminal menu
-SignWith: $FINGERPRINT
-EOF
-
-echo "==> Initialising RPM repo structure"
-mkdir -p "$PACKAGES_REPO/rpm/x86_64" "$PACKAGES_REPO/rpm/aarch64"
-createrepo_c "$PACKAGES_REPO/rpm/x86_64/"
-createrepo_c "$PACKAGES_REPO/rpm/aarch64/"
-
 echo "==> Exporting public key"
 gpg --armor --export "$FINGERPRINT" > "$PACKAGES_REPO/gpg.key"
 
@@ -69,19 +51,7 @@ cat > "$PACKAGES_REPO/index.html" <<'HTMLEOF'
 <body>
 <h1>chooz package repository</h1>
 
-<h2>Debian / Ubuntu</h2>
-<pre>
-curl -fsSL https://sumpfgottheit.github.io/packages/gpg.key \
-  | sudo gpg --dearmor -o /etc/apt/keyrings/sumpfgottheit.gpg
-
-echo "deb [signed-by=/etc/apt/keyrings/sumpfgottheit.gpg] \
-  https://sumpfgottheit.github.io/packages/apt stable main" \
-  | sudo tee /etc/apt/sources.list.d/chooz.list
-
-sudo apt update &amp;&amp; sudo apt install chooz
-</pre>
-
-<h2>Fedora / RHEL / CentOS</h2>
+<h2>Rocky Linux 9 / RHEL-compatible</h2>
 <pre>
 sudo rpm --import https://sumpfgottheit.github.io/packages/gpg.key
 
@@ -112,9 +82,6 @@ echo "---"
 gpg --armor --export-secret-keys "$FINGERPRINT"
 echo "---"
 echo ""
-echo "Secret name : PACKAGES_DEPLOY_TOKEN"
-echo "Create a Fine-Grained PAT with Contents: Read+Write on sumpfgottheit/packages"
-echo ""
 echo "============================================================"
 echo "  NEXT STEPS"
 echo "============================================================"
@@ -122,4 +89,4 @@ echo "1.  cd $PACKAGES_REPO"
 echo "2.  git add -A && git commit -m 'chore: init package repository'"
 echo "3.  git push"
 echo "4.  On GitHub: Settings → Pages → Deploy from branch → main / (root)"
-echo "5.  Add the two secrets above to sumpfgottheit/chooz"
+echo "5.  Add the secret above to sumpfgottheit/chooz"
